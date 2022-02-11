@@ -9,7 +9,7 @@ from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simpli
 from transformers import AutoTokenizer
 
 
-_URL = "https://github.com/doc-analysis/XFUN/releases/download/v1.0/"
+_URL = "/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/"
 
 _LANG = ["zh", "de", "es", "fr", "en", "it", "ja", "pt"]
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
             with open(filepath[0], "r") as f:
                 data = json.load(f)
 
-            for doc in data["documents"]:
+            for doc in data["documents"][:8]:
                 doc["img"]["fpath"] = os.path.join(filepath[1], doc["img"]["fname"])
                 image, size = load_image(doc["img"]["fpath"])
                 document = doc["document"]
