@@ -159,6 +159,7 @@ class XFUN(datasets.GeneratorBasedBuilder):
                         label[0] = f"B-{line['label'].upper()}"
                     tokenized_inputs.update({"bbox": bbox, "labels": label})
                     if label[0] != "O":
+                        # entity_id_to_index_map:每个实体对应一个唯一id，为每个id按照顺序重新索引
                         entity_id_to_index_map[line["id"]] = len(entities)
                         entities.append(
                             {
@@ -209,7 +210,9 @@ class XFUN(datasets.GeneratorBasedBuilder):
                     item = {}
                     for k in tokenized_doc:
                         item[k] = tokenized_doc[k][index : index + chunk_size]
+                    # entities_in_this_span保存切分后的所有实体
                     entities_in_this_span = []
+                    # global_to_this_span 为切分的实体id-->切分后的实体id
                     global_to_local_map = {}
                     for entity_id, entity in enumerate(entities):
                         if (
@@ -222,14 +225,15 @@ class XFUN(datasets.GeneratorBasedBuilder):
                             entities_in_this_span.append(entity)
                     relations_in_this_span = []
                     for relation in relations:
+                        # relation_span: start_index前实体的start，end_index尾实体的end
                         if (
                             index <= relation["start_index"] < index + chunk_size
                             and index <= relation["end_index"] < index + chunk_size
                         ):
                             relations_in_this_span.append(
                                 {
-                                    "head": global_to_local_map[relation["head"]],
-                                    "tail": global_to_local_map[relation["tail"]],
+                                    "head": global_to_local_map[relation["head"]],  # 切分后的头实体的索引
+                                    "tail": global_to_local_map[relation["tail"]],  # 切分后的尾实体的索引
                                     "start_index": relation["start_index"] - index,
                                     "end_index": relation["end_index"] - index,
                                 }

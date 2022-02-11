@@ -127,10 +127,11 @@ class REDecoder(nn.Module):
             head_entities = torch.tensor(relations[b]["head"], device=device)
             tail_entities = torch.tensor(relations[b]["tail"], device=device)
             relation_labels = torch.tensor(relations[b]["label"], device=device)
+            # entities_start_index保存每个实体的起始索引
             entities_start_index = torch.tensor(entities[b]["start"], device=device)
             entities_labels = torch.tensor(entities[b]["label"], device=device)
-            head_index = entities_start_index[head_entities]
-            head_label = entities_labels[head_entities]
+            head_index = entities_start_index[head_entities]   # 获取head_entities实体在原文中的位起始索引
+            head_label = entities_labels[head_entities]   # 获取head_entities实体所对应的label
             head_label_repr = self.entity_emb(head_label)
 
             tail_index = entities_start_index[tail_entities]
