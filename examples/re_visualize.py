@@ -189,14 +189,14 @@ def _generate_examples():
     with open(preds_path, 'r') as f:
         data = json.load(f)
         preds = data['pred']
-        re_labels = data['label']
+        # re_labels = data['label']
     assert len(preds) == len(items)
 
     reindex2label = dict(enumerate(["HEADER", "QUESTION", "ANSWER"]))
     docs = {}
     for i, item in enumerate(items):
         item['pred'] = preds[i]
-        item['re_label'] = re_labels[i]
+        # item['re_label'] = re_labels[i]
         _, _, uid, chu = item['id'].split('_')
         if uid in docs:
             docs[uid] += [item]
@@ -207,12 +207,12 @@ def _generate_examples():
         bbox_src = []
         pred = []
         lines = []
-        re_label = []
+        # re_label = []
         for d in doc:
             # 使用append，因为pred的头尾实体的index未进行全局再索引，而是chunk索引
             bbox_src.append(d['bbox_src'])
             pred.append(d['pred'])
-            re_label.append(d['re_label'])
+            # re_label.append(d['re_label'])
             if lines == []:
                 lines.extend(d['lines'])
         line = ' '.join(lines)
@@ -227,7 +227,7 @@ def _generate_examples():
         offset = tokenizer_output['offset_mapping']
 
         img_path = os.path.join(filepaths[0][1], 'zh_val_%s.jpg' % doc_id)
-        save_path = os.path.join('results-re', 'zh_val_%s.jpg' % doc_id)
+        save_path = os.path.join('results-re-pred', 'zh_val_%s.jpg' % doc_id)
         if not os.path.exists(os.path.dirname(save_path)):
             os.mkdir(os.path.dirname(save_path))
         img = cv2.imread(img_path)
@@ -289,9 +289,10 @@ def _generate_examples():
             return image3
 
         img_pred = draw_rec(copy.deepcopy(img), pred, tokens)
-        img_label = draw_rec(copy.deepcopy(img), re_label, tokens)
+        # img_label = draw_rec(copy.deepcopy(img), re_label, tokens)
 
-        cv2.imwrite(save_path, function(img_label, img_pred))
+        # cv2.imwrite(save_path, function(img_label, img_pred))
+        cv2.imwrite(save_path, img_pred)
 
         # with open('test.txt', 'w') as f:
         #     for t, l in zip(tokens, labels):

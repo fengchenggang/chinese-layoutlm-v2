@@ -102,44 +102,44 @@ class XfunReTrainer(FunsdTrainer):
             self.control = self.callback_handler.on_prediction_step(self.args, self.state, self.control)
 
         gt_relations = []
-        for b in range(len(re_labels)):
-            rel_sent = []
-            for head, tail in zip(re_labels[b]["head"], re_labels[b]["tail"]):
-                rel = {}
-                rel["head_id"] = head
-                rel["head"] = (entities[b]["start"][rel["head_id"]], entities[b]["end"][rel["head_id"]])
-                rel["head_type"] = entities[b]["label"][rel["head_id"]]
+        # for b in range(len(re_labels)):
+        #     rel_sent = []
+        #     for head, tail in zip(re_labels[b]["head"], re_labels[b]["tail"]):
+        #         rel = {}
+        #         rel["head_id"] = head
+        #         rel["head"] = (entities[b]["start"][rel["head_id"]], entities[b]["end"][rel["head_id"]])
+        #         rel["head_type"] = entities[b]["label"][rel["head_id"]]
+        #
+        #         rel["tail_id"] = tail
+        #         try:
+        #             rel["tail"] = (entities[b]["start"][rel["tail_id"]], entities[b]["end"][rel["tail_id"]])
+        #         except:
+        #             print(1)
+        #         rel["tail_type"] = entities[b]["label"][rel["tail_id"]]
+        #
+        #         rel["type"] = 1
+        #
+        #         rel_sent.append(rel)
+        #
+        #     gt_relations.append(rel_sent)
+        #
+        # re_metrics = self.compute_metrics(EvalPrediction(predictions=pred_relations, label_ids=gt_relations))
 
-                rel["tail_id"] = tail
-                try:
-                    rel["tail"] = (entities[b]["start"][rel["tail_id"]], entities[b]["end"][rel["tail_id"]])
-                except:
-                    print(1)
-                rel["tail_type"] = entities[b]["label"][rel["tail_id"]]
-
-                rel["type"] = 1
-
-                rel_sent.append(rel)
-
-            gt_relations.append(rel_sent)
-
-        re_metrics = self.compute_metrics(EvalPrediction(predictions=pred_relations, label_ids=gt_relations))
-
-        re_metrics = {
-            "precision": re_metrics["ALL"]["p"],
-            "recall": re_metrics["ALL"]["r"],
-            "f1": re_metrics["ALL"]["f1"],
-        }
-        re_metrics[f"{metric_key_prefix}_loss"] = outputs.loss.mean().item()
+        # re_metrics = {
+        #     "precision": re_metrics["ALL"]["p"],
+        #     "recall": re_metrics["ALL"]["r"],
+        #     "f1": re_metrics["ALL"]["f1"],
+        # }
+        # re_metrics[f"{metric_key_prefix}_loss"] = outputs.loss.mean().item()
 
         metrics = {}
 
         # # Prefix all keys with metric_key_prefix + '_'
-        for key in list(re_metrics.keys()):
-            if not key.startswith(f"{metric_key_prefix}_"):
-                metrics[f"{metric_key_prefix}_{key}"] = re_metrics.pop(key)
-            else:
-                metrics[f"{key}"] = re_metrics.pop(key)
+        # for key in list(re_metrics.keys()):
+        #     if not key.startswith(f"{metric_key_prefix}_"):
+        #         metrics[f"{metric_key_prefix}_{key}"] = re_metrics.pop(key)
+        #     else:
+        #         metrics[f"{key}"] = re_metrics.pop(key)
 
         # return metrics
         return PredictionOutput(pred_relations, gt_relations, metrics)
