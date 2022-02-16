@@ -111,7 +111,10 @@ class XfunReTrainer(FunsdTrainer):
                 rel["head_type"] = entities[b]["label"][rel["head_id"]]
 
                 rel["tail_id"] = tail
-                rel["tail"] = (entities[b]["start"][rel["tail_id"]], entities[b]["end"][rel["tail_id"]])
+                try:
+                    rel["tail"] = (entities[b]["start"][rel["tail_id"]], entities[b]["end"][rel["tail_id"]])
+                except:
+                    print(1)
                 rel["tail_type"] = entities[b]["label"][rel["tail_id"]]
 
                 rel["type"] = 1
@@ -138,7 +141,8 @@ class XfunReTrainer(FunsdTrainer):
             else:
                 metrics[f"{key}"] = re_metrics.pop(key)
 
-        return metrics
+        # return metrics
+        return PredictionOutput(pred_relations, gt_relations, metrics)
 
     def evaluate(
         self,
@@ -175,11 +179,11 @@ class XfunReTrainer(FunsdTrainer):
 
         self.args.local_rank = -1
         eval_dataloader = self.get_eval_dataloader(eval_dataset)
-        self.args.local_rank = torch.distributed.get_rank()
+        # self.args.local_rank = torch.distributed.get_rank()
 
         start_time = time.time()
 
-        metrics = self.prediction_loop(
+        outputPrediction = self.prediction_loop(
             eval_dataloader,
             description="Evaluation",
             # No point gathering the predictions if there are no metrics, otherwise we defer to
@@ -188,6 +192,7 @@ class XfunReTrainer(FunsdTrainer):
             ignore_keys=ignore_keys,
             metric_key_prefix=metric_key_prefix,
         )
+        metrics = outputPrediction.metrics
 
         n_samples = len(eval_dataset if eval_dataset is not None else self.eval_dataset)
         metrics.update(speed_metrics(metric_key_prefix, start_time, n_samples))

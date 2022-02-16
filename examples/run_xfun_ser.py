@@ -3,6 +3,9 @@
 
 import logging
 import os
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+
 import sys
 from dataclasses import dataclass, field
 from typing import Optional
@@ -91,9 +94,12 @@ def main():
     if training_args.do_train:
         column_names = datasets["train"].column_names
         features = datasets["train"].features
-    else:
+    elif training_args.do_eval:
         column_names = datasets["validation"].column_names
         features = datasets["validation"].features
+    else:
+        column_names = datasets["test"].column_names
+        features = datasets["test"].features
     text_column_name = "input_ids"
     label_column_name = "labels"
 

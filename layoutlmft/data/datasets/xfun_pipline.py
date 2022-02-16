@@ -101,6 +101,8 @@ class XFUN(datasets.GeneratorBasedBuilder):
         ]
 
     def _generate_examples(self, filepaths):
+        items = []
+
         for filepath in filepaths:
             logger.info("Generating examples from = %s", filepath)
             with open(filepath[0], "r") as f:
@@ -246,4 +248,35 @@ class XFUN(datasets.GeneratorBasedBuilder):
                             "relations": relations_in_this_span,
                         }
                     )
-                    yield f"{doc['id']}_{chunk_id}", item
+                    # yield f"{doc['id']}_{chunk_id}", item
+                    items.append(item)
+
+        preds_path = '/work/Codes/layoutlmft/examples/output/test-ner-xfund/test_predictions.txt'  # 对齐后的实体识别结果
+        with open(preds_path, 'r') as f:
+            preds = []
+            for line in f.readlines():
+                preds.append(line.split())
+        assert len(preds) == len(items)
+
+        def gene_entities(results):
+            entities = []
+            end = -1
+            for index, p in enumerate(results):
+                if index < end:
+                    continue
+                if p == 'O':
+                    end = index + 1
+                    while end < len(results) and results[end] == 'O':
+                        end += 1
+                else:
+                    tag = p.split('-')[-1]
+                    end = index + 1
+                    while end < len(results) and results[end] == 'I-' + tag:
+                        end += 1
+                    entities.append({'start': index, 'end': end, 'label': tag})
+            return entities
+
+        for i in range(len(preds)):
+            items[i]['entities'] = gene_entities(preds[i])
+            yield items[i]['id'], items[i]
+        print('')

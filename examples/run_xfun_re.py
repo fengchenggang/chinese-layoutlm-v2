@@ -3,8 +3,9 @@
 
 import logging
 import os
+import json
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '5'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 import sys
 
@@ -12,6 +13,7 @@ import numpy as np
 from datasets import ClassLabel, load_dataset
 
 import layoutlmft.data.datasets.xfun
+import layoutlmft.data.datasets.xfun_pipline
 import transformers
 from layoutlmft import AutoModelForRelationExtraction
 from layoutlmft.data.data_args import XFUNDataTrainingArguments
@@ -84,7 +86,8 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
     datasets = load_dataset(
-        os.path.abspath(layoutlmft.data.datasets.xfun.__file__),
+        # os.path.abspath(layoutlmft.data.datasets.xfun.__file__),
+        os.path.abspath(layoutlmft.data.datasets.xfun_pipline.__file__),
         f"xfun.{data_args.lang}",
         additional_langs=data_args.additional_langs,
         keep_in_memory=True,
@@ -92,9 +95,12 @@ def main():
     if training_args.do_train:
         column_names = datasets["train"].column_names
         features = datasets["train"].features
-    else:
+    elif training_args.do_eval:
         column_names = datasets["validation"].column_names
         features = datasets["validation"].features
+    else:
+        column_names = datasets["test"].column_names
+        features = datasets["test"].features
     text_column_name = "input_ids"
     label_column_name = "labels"
 
@@ -232,6 +238,20 @@ def main():
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+
+    # Predict
+    if training_args.do_predict:
+        logger.info("*** Predict ***")
+
+        predictions, labels, metrics = trainer.predict(test_dataset)
+
+        trainer.log_metrics("test", metrics)
+        trainer.save_metrics("test", metrics)
+
+        # Save predictions
+        output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions_re.json")
+        with open(output_test_predictions_file, 'w') as f:
+            json.dump({'pred':predictions, 'label': labels}, f)
 
 
 def _mp_fn(index):
