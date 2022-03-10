@@ -30,7 +30,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from .data_process import generate_examples
+from data_process import generate_examples
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.5.0")
@@ -111,7 +111,7 @@ def ser():
         label_list.sort()
         return label_list
 
-    label_list = ['question', 'answer', 'other']
+    label_list = ["O", "B-QUESTION", "B-ANSWER", "B-HEADER", "I-ANSWER", "I-QUESTION", "I-HEADER"]
     num_labels = len(label_list)
 
     config = AutoConfig.from_pretrained(

@@ -19,12 +19,15 @@ tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 def generate_examples():
     filepaths = [['/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val.json',
                   '/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val']]
+
+    items = []
+
     for filepath in filepaths:
         logger.info("Generating examples from = %s", filepath)
         with open(filepath[0], "r") as f:
             data = json.load(f)
 
-        for doc in data["documents"]:
+        for doc in data["documents"][:20]:
             doc["img"]["fpath"] = os.path.join(filepath[1], doc["img"]["fname"])
             image, size = load_image(doc["img"]["fpath"])
             document = doc["document"]
@@ -158,13 +161,14 @@ def generate_examples():
                         )
                 item.update(
                     {
-                        "id": f"{doc['id']}_{chunk_id}",
                         "image": image,
                         "entities": entities_in_this_span,
                         "relations": relations_in_this_span,
                     }
                 )
-                yield item
+                items.append(item)
+        return items
+
 
 
 if __name__ == '__main__':

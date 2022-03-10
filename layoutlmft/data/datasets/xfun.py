@@ -8,8 +8,7 @@ import datasets
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
 
-
-_URL = "/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/"
+_URL = "/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/"
 
 _LANG = ["zh", "de", "es", "fr", "en", "it", "ja", "pt"]
 logger = logging.getLogger(__name__)
@@ -72,31 +71,18 @@ class XFUN(datasets.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager):
         """Returns SplitGenerators."""
         urls_to_download = {
-            # "train": [f"{_URL}{self.config.lang}.train.json", f"{_URL}{self.config.lang}.train.zip"],
-            # "val": [f"{_URL}{self.config.lang}.val.json", f"{_URL}{self.config.lang}.val.zip"],
-            "test": [f"{_URL}{self.config.lang}.val.align.json", f"{_URL}{self.config.lang}.val.zip"],
+
+            "test": [f"{_URL}{self.config.lang}.val.json", f"{_URL}{self.config.lang}.val.zip"],
         }
         downloaded_files = dl_manager.download_and_extract(urls_to_download)
-        # train_files_for_many_langs = [downloaded_files["train"]]
-        # val_files_for_many_langs = [downloaded_files["val"]]
+
         test_files_for_many_langs = [downloaded_files["test"]]
-        # if self.config.additional_langs:
-        #     additional_langs = self.config.additional_langs.split("+")
-        #     if "all" in additional_langs:
-        #         additional_langs = [lang for lang in _LANG if lang != self.config.lang]
-        #     for lang in additional_langs:
-        #         urls_to_download = {"train": [f"{_URL}{lang}.train.json", f"{_URL}{lang}.train.zip"]}
-        #         additional_downloaded_files = dl_manager.download_and_extract(urls_to_download)
-        #         train_files_for_many_langs.append(additional_downloaded_files["train"])
 
         logger.info(f"Training on {self.config.lang} with additional langs({self.config.additional_langs})")
         logger.info(f"Evaluating on {self.config.lang}")
         logger.info(f"Testing on {self.config.lang}")
         return [
-            # datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepaths": train_files_for_many_langs}),
-            # datasets.SplitGenerator(
-            #     name=datasets.Split.VALIDATION, gen_kwargs={"filepaths": val_files_for_many_langs}
-            # ),
+
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepaths": test_files_for_many_langs}),
         ]
 
@@ -209,15 +195,15 @@ class XFUN(datasets.GeneratorBasedBuilder):
                 for chunk_id, index in enumerate(range(0, len(tokenized_doc["input_ids"]), chunk_size)):
                     item = {}
                     for k in tokenized_doc:
-                        item[k] = tokenized_doc[k][index : index + chunk_size]
+                        item[k] = tokenized_doc[k][index: index + chunk_size]
                     # entities_in_this_span保存切分后的所有实体
                     entities_in_this_span = []
                     # global_to_this_span 为切分的实体id-->切分后的实体id
                     global_to_local_map = {}
                     for entity_id, entity in enumerate(entities):
                         if (
-                            index <= entity["start"] < index + chunk_size
-                            and index <= entity["end"] < index + chunk_size
+                                index <= entity["start"] < index + chunk_size
+                                and index <= entity["end"] < index + chunk_size
                         ):
                             entity["start"] = entity["start"] - index
                             entity["end"] = entity["end"] - index
@@ -227,8 +213,8 @@ class XFUN(datasets.GeneratorBasedBuilder):
                     for relation in relations:
                         # relation_span: start_index前实体的start，end_index尾实体的end
                         if (
-                            index <= relation["start_index"] < index + chunk_size
-                            and index <= relation["end_index"] < index + chunk_size
+                                index <= relation["start_index"] < index + chunk_size
+                                and index <= relation["end_index"] < index + chunk_size
                         ):
                             relations_in_this_span.append(
                                 {
