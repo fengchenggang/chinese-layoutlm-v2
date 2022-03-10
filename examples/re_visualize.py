@@ -227,7 +227,7 @@ def _generate_examples():
         offset = tokenizer_output['offset_mapping']
 
         img_path = os.path.join(filepaths[0][1], 'zh_val_%s.jpg' % doc_id)
-        save_path = os.path.join('results-re-pred', 'zh_val_%s.jpg' % doc_id)
+        save_path = os.path.join('re-visualize', 'zh_val_%s.jpg' % doc_id)
         if not os.path.exists(os.path.dirname(save_path)):
             os.mkdir(os.path.dirname(save_path))
         img = cv2.imread(img_path)
