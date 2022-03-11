@@ -225,7 +225,7 @@ def _generate_examples():
         assert len(offset) == len(bbox_src) == len(pred) == len(tokens) == len(labels)
 
         img_path = os.path.join(filepaths[0][1], 'zh_val_%s.jpg' % doc_id)
-        save_path = os.path.join('results-align', 'zh_val_%s.jpg' % doc_id)
+        save_path = os.path.join('ner-visualize', 'zh_val_%s.jpg' % doc_id)
         if not os.path.exists(os.path.dirname(save_path)):
             os.mkdir(os.path.dirname(save_path))
         img = cv2.imread(img_path)

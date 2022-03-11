@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
+ner_labels = ["O", "B-QUESTION", "B-ANSWER", "B-HEADER", "I-ANSWER", "I-QUESTION", "I-HEADER"]
+ner_label_index_map = {label: index for index, label in enumerate(ner_labels)}
+entity_labels = ["HEADER", "QUESTION", "ANSWER", "OTHER"]
+entity_label_index_map = {label: index for index, label in enumerate(entity_labels)}
+
 
 def generate_examples():
     filepaths = [['/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val.json',
@@ -78,6 +83,7 @@ def generate_examples():
                 else:
                     label = [f"I-{line['label'].upper()}"] * len(bbox)
                     label[0] = f"B-{line['label'].upper()}"
+                label = [ner_label_index_map[l] for l in label]
                 tokenized_inputs.update({"bbox": bbox, "labels": label})
                 if label[0] != "O":
                     # entity_id_to_index_map:每个实体对应一个唯一id，为每个id按照顺序重新索引
@@ -86,7 +92,7 @@ def generate_examples():
                         {
                             "start": len(tokenized_doc["input_ids"]),
                             "end": len(tokenized_doc["input_ids"]) + len(tokenized_inputs["input_ids"]),
-                            "label": line["label"].upper(),
+                            "label": entity_label_index_map[line["label"].upper()],
                         }
                     )
                 for i in tokenized_doc:
@@ -166,9 +172,20 @@ def generate_examples():
                         "relations": relations_in_this_span,
                     }
                 )
+
+                # 将entities，relations的字典合并
+                def merge(ents):
+                    new_ents = {key: [] for key in ents[0].keys()}
+                    for ent in ents:
+                        for k, v in ent.items():
+                            new_ents[k] += [v]
+                    return new_ents
+
+                item['entities'] = merge(item['entities'])
+                item['relations'] = merge(item['relations'])
+
                 items.append(item)
         return items
-
 
 
 if __name__ == '__main__':

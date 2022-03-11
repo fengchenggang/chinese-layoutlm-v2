@@ -3,6 +3,7 @@
 
 import logging
 import os
+import json
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 
@@ -222,6 +223,10 @@ def ner_infer():
         [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
+
+    output_test_predictions_file = os.path.join('./output/test-ner-xfund', "test_predictions_re.json")
+    with open(output_test_predictions_file, 'w') as f:
+        json.dump({'pred': predictions, 'label': labels}, f)
 
     return true_predictions
 

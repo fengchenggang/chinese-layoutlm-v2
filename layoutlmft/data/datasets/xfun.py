@@ -87,6 +87,9 @@ class XFUN(datasets.GeneratorBasedBuilder):
         ]
 
     def _generate_examples(self, filepaths):
+        filepaths = [['/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/zh.val.json',
+                      '/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/zh.val']]
+
         for filepath in filepaths:
             logger.info("Generating examples from = %s", filepath)
             with open(filepath[0], "r") as f:
