@@ -31,7 +31,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from data_process import generate_examples
+from data_process_ner import generate_examples
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.5.0")
@@ -224,9 +224,12 @@ def ner_infer():
         for prediction, label in zip(predictions, labels)
     ]
 
-    output_test_predictions_file = os.path.join('./output/test-ner-xfund', "test_predictions_re.json")
-    with open(output_test_predictions_file, 'w') as f:
-        json.dump({'pred': predictions, 'label': labels}, f)
+    # Save predictions
+    output_test_predictions_file = os.path.join('./output/test-ner-xfund', "test_predictions.txt")
+    if trainer.is_world_process_zero():
+        with open(output_test_predictions_file, "w") as writer:
+            for prediction in true_predictions:
+                writer.write(" ".join(prediction) + "\n")
 
     return true_predictions
 

@@ -2,28 +2,31 @@
 import json
 import logging
 import os
-import cv2
-import copy
-import numpy as np
 
 import datasets
 
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
 
-_URL = "/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/"
+_URL = "/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/"
 
 _LANG = ["zh", "de", "es", "fr", "en", "it", "ja", "pt"]
 logger = logging.getLogger(__name__)
 
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
+ner_labels = ["O", "B-QUESTION", "B-ANSWER", "B-HEADER", "I-ANSWER", "I-QUESTION", "I-HEADER"]
+ner_label_index_map = {label: index for index, label in enumerate(ner_labels)}
+entity_labels = ["HEADER", "QUESTION", "ANSWER"]
+entity_label_index_map = {label: index for index, label in enumerate(entity_labels)}
 
-def _generate_examples():
-    preds_path = '/work/Codes/layoutlmft/examples/output/test-ner-xfund/test_predictions.txt'
+
+def generate_examples():
     filepaths = [['/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val.json',
                   '/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val']]
+
     items = []
+
     for filepath in filepaths:
         logger.info("Generating examples from = %s", filepath)
         with open(filepath[0], "r") as f:
@@ -33,12 +36,10 @@ def _generate_examples():
             doc["img"]["fpath"] = os.path.join(filepath[1], doc["img"]["fname"])
             image, size = load_image(doc["img"]["fpath"])
             document = doc["document"]
-            tokenized_doc = {"input_ids": [], "bbox": [], "labels": [], "bbox_src": []}
+            tokenized_doc = {"input_ids": [], "bbox": [], "labels": []}
             entities = []
             relations = []
             id2label = {}
-            offsets = []
-            lines = []
             entity_id_to_index_map = {}
             empty_entity = set()
             for line in document:
@@ -53,19 +54,13 @@ def _generate_examples():
                     return_offsets_mapping=True,
                     return_attention_mask=False,
                 )
-
-                lines.append(line['text'])
-                offsets.append(tokenized_inputs['offset_mapping'])
-
                 text_length = 0
                 ocr_length = 0
                 bbox = []
-                bbox_src = []
                 last_box = None
                 for token_id, offset in zip(tokenized_inputs["input_ids"], tokenized_inputs["offset_mapping"]):
                     if token_id == 6:
                         bbox.append(None)
-                        bbox_src.append(None)
                         continue
                     text_length += offset[1] - offset[0]
                     tmp_box = []
@@ -78,22 +73,18 @@ def _generate_examples():
                     if len(tmp_box) == 0:
                         tmp_box = last_box
                     bbox.append(normalize_bbox(merge_bbox(tmp_box), size))
-                    bbox_src.append(merge_bbox(tmp_box))
                     last_box = tmp_box
                 bbox = [
                     [bbox[i + 1][0], bbox[i + 1][1], bbox[i + 1][0], bbox[i + 1][1]] if b is None else b
                     for i, b in enumerate(bbox)
-                ]
-                bbox_src = [
-                    [bbox_src[i + 1][0], bbox_src[i + 1][1], bbox_src[i + 1][0], bbox_src[i + 1][1]] if b is None else b
-                    for i, b in enumerate(bbox_src)
                 ]
                 if line["label"] == "other":
                     label = ["O"] * len(bbox)
                 else:
                     label = [f"I-{line['label'].upper()}"] * len(bbox)
                     label[0] = f"B-{line['label'].upper()}"
-                tokenized_inputs.update({"bbox": bbox, "labels": label, "bbox_src": bbox_src})
+                label = [ner_label_index_map[l] for l in label]
+                tokenized_inputs.update({"bbox": bbox, "labels": label})
                 if label[0] != "O":
                     # entity_id_to_index_map:每个实体对应一个唯一id，为每个id按照顺序重新索引
                     entity_id_to_index_map[line["id"]] = len(entities)
@@ -101,7 +92,7 @@ def _generate_examples():
                         {
                             "start": len(tokenized_doc["input_ids"]),
                             "end": len(tokenized_doc["input_ids"]) + len(tokenized_inputs["input_ids"]),
-                            "label": line["label"].upper(),
+                            "label": entity_label_index_map[line["label"].upper()],
                         }
                     )
                 for i in tokenized_doc:
@@ -176,117 +167,29 @@ def _generate_examples():
                         )
                 item.update(
                     {
-                        "id": f"{doc['id']}_{chunk_id}",
                         "image": image,
                         "entities": entities_in_this_span,
                         "relations": relations_in_this_span,
-                        'offsets': offsets,
-                        'lines': lines,
                     }
                 )
-                items.append(item)
-    with open(preds_path, 'r') as f:
-        preds = []
-        for line in f.readlines():
-            preds.append(line.split())
-    assert len(preds) == len(items)
 
-    docs = {}
-    for i, item in enumerate(items):
-        item['pred'] = preds[i]
-        _, _, uid, chu = item['id'].split('_')
-        if uid in docs:
-            docs[uid] += [item]
-        else:
-            docs[uid] = [item]
+                # 将entities，relations的字典合并
+                def merge(ents):
+                    new_ents = {key: [] for key in ents[0].keys()}
+                    for ent in ents:
+                        for k, v in ent.items():
+                            new_ents[k] += [v]
+                    return new_ents
 
-    for doc_id, doc in docs.items():
-        bbox_src = []
-        pred = []
-        lines = []
-        labels = []
-        for d in doc:
-            bbox_src.extend(d['bbox_src'])
-            pred.extend(d['pred'])
-            labels.extend(d['labels'])
-            if lines == []:
-                lines.extend(d['lines'])
-        line = ' '.join(lines)
-        tokenizer_output = tokenizer(
-            line,
-            add_special_tokens=False,
-            return_offsets_mapping=True,
-            return_attention_mask=False,
-        )
-
-        tokens = tokenizer.tokenize(line)
-        offset = tokenizer_output['offset_mapping']
-
-        assert len(offset) == len(bbox_src) == len(pred) == len(tokens) == len(labels)
-
-        img_path = os.path.join(filepaths[0][1], 'zh_val_%s.jpg' % doc_id)
-        save_path = os.path.join('ner-visualize', 'zh_val_%s.jpg' % doc_id)
-        if not os.path.exists(os.path.dirname(save_path)):
-            os.mkdir(os.path.dirname(save_path))
-        img = cv2.imread(img_path)
-
-        def draw_rec(img, results, tokens):
-            end = -1
-            for index, p in enumerate(results):
-                if index == 166:
-                    print(1)
-                if index < end:
-                    continue
-                if p == 'O':
-                    continue
+                item['entities'] = merge(item['entities'])
+                if item['relations'] == []:
+                    item['relations'] = {'head':[], 'tail':[], 'start_index':[], 'end_index':[]}
                 else:
-                    tag = p.split('-')[-1]
-                    end = index + 1
-                    while end < len(results) and results[end] == 'I-' + tag:
-                        end += 1
+                    item['relations'] = merge(item['relations'])
 
-                    ent_bbox = bbox_src[index:end]
-                    x1, y1, x2, y2 = [], [], [], []
-                    for bb in ent_bbox:
-                        x1.append(bb[0])
-                        y1.append(bb[1])
-                        x2.append(bb[2])
-                        y2.append(bb[3])
-                    x1 = min(x1)
-                    y1 = min(y1)
-                    x2 = max(x2)
-                    y2 = max(y2)
-                    if tag == 'QUESTION':
-                        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 1)
-                    elif tag == 'ANSWER':
-                        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 1)
-                    else:
-                        cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 1)
-            return img
-
-        def function(image1, image2):
-            h1, w1, c1 = image1.shape
-            h2, w2, c2 = image2.shape
-            if c1 != c2:
-                print("channels NOT match, cannot merge")
-                return
-            else:
-                image3 = np.hstack([image1, image2])
-
-            return image3
-
-        img_pred = draw_rec(copy.deepcopy(img), pred, tokens)
-        img_label = draw_rec(copy.deepcopy(img), labels, tokens)
-
-        cv2.imwrite(save_path, function(img_label, img_pred))
-
-        # with open('test.txt', 'w') as f:
-        #     for t, l in zip(tokens, labels):
-        #         f.write(t + '\t' + l + '\n')
+                items.append(item)
+        return items
 
 
 if __name__ == '__main__':
-    '''
-    将实体的识别结果跟真是结果显示在图片中
-    '''
-    _generate_examples()
+    generate_examples()

@@ -32,7 +32,7 @@ def generate_examples():
         with open(filepath[0], "r") as f:
             data = json.load(f)
 
-        for doc in data["documents"][:20]:
+        for doc in data["documents"]:
             doc["img"]["fpath"] = os.path.join(filepath[1], doc["img"]["fname"])
             image, size = load_image(doc["img"]["fpath"])
             document = doc["document"]
@@ -168,21 +168,8 @@ def generate_examples():
                 item.update(
                     {
                         "image": image,
-                        "entities": entities_in_this_span,
-                        "relations": relations_in_this_span,
                     }
                 )
-
-                # 将entities，relations的字典合并
-                def merge(ents):
-                    new_ents = {key: [] for key in ents[0].keys()}
-                    for ent in ents:
-                        for k, v in ent.items():
-                            new_ents[k] += [v]
-                    return new_ents
-
-                item['entities'] = merge(item['entities'])
-                item['relations'] = merge(item['relations'])
 
                 items.append(item)
         return items
