@@ -21,8 +21,8 @@ tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
 def _generate_examples():
     preds_path = '/work/Codes/layoutlmft/examples/output/test-re-xfund/test_predictions_re.json'
-    filepaths = [['/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/zh.val.align.json',
-                  '/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/zh.val']]
+    filepaths = [['/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val.json',
+                  '/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val']]
     items = []
     for filepath in filepaths:
         logger.info("Generating examples from = %s", filepath)

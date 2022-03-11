@@ -5,7 +5,7 @@ import logging
 import os
 import json
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '70'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
 
 import sys
 
@@ -30,7 +30,7 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
-from data_process_re import generate_examples
+
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def re():
         'zh',
         '--warmup_ratio',
         '0.1',
-        ])
+    ])
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
@@ -165,17 +165,16 @@ def re():
 trainer = re()
 
 
-def re_infer():
-    test_dataset = generate_examples()
+def re_infer(test_dataset):
     predictions, labels, metrics = trainer.predict(test_dataset)
 
     # Save predictions
-    output_test_predictions_file = os.path.join('', "test_predictions_re.json")
+    output_test_predictions_file = os.path.join('./output/test-re-xfund', "test_predictions_re.json")
     with open(output_test_predictions_file, 'w') as f:
         json.dump({'pred': predictions, 'label': labels}, f)
 
 
-
-
 if __name__ == "__main__":
-    re_infer()
+    from data_process_re import generate_examples
+    test_dataset = generate_examples()
+    re_infer(test_dataset)

@@ -31,7 +31,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers.utils import check_min_version
-from data_process_ner import generate_examples
+
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
 check_min_version("4.5.0")
@@ -96,21 +96,6 @@ def ser():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
-
-    # datasets = load_dataset(
-    #     os.path.abspath(layoutlmft.data.datasets.xfun.__file__),
-    #     f"xfun.{data_args.lang}",
-    #     additional_langs=data_args.additional_langs,
-    #     keep_in_memory=True,
-    # )
-
-    def get_label_list(labels):
-        unique_labels = set()
-        for label in labels:
-            unique_labels = unique_labels | set(label)
-        label_list = list(unique_labels)
-        label_list.sort()
-        return label_list
 
     label_list = ["O", "B-QUESTION", "B-ANSWER", "B-HEADER", "I-ANSWER", "I-QUESTION", "I-HEADER"]
     num_labels = len(label_list)
@@ -213,8 +198,7 @@ def ser():
 trainer, label_list = ser()
 
 
-def ner_infer():
-    test_dataset = generate_examples()
+def ner_infer(test_dataset):
     predictions, labels, metrics = trainer.predict(test_dataset)
     predictions = np.argmax(predictions, axis=2)
 
@@ -224,15 +208,17 @@ def ner_infer():
         for prediction, label in zip(predictions, labels)
     ]
 
-    # Save predictions
-    output_test_predictions_file = os.path.join('./output/test-ner-xfund', "test_predictions.txt")
-    if trainer.is_world_process_zero():
-        with open(output_test_predictions_file, "w") as writer:
-            for prediction in true_predictions:
-                writer.write(" ".join(prediction) + "\n")
+    # # Save predictions
+    # output_test_predictions_file = os.path.join('./output/test-ner-xfund', "test_predictions.txt")
+    # if trainer.is_world_process_zero():
+    #     with open(output_test_predictions_file, "w") as writer:
+    #         for prediction in true_predictions:
+    #             writer.write(" ".join(prediction) + "\n")
 
     return true_predictions
 
 
 if __name__ == "__main__":
-    ner_infer()
+    from data_process_ner import generate_examples
+    test_dataset = generate_examples()
+    ner_infer(test_dataset)

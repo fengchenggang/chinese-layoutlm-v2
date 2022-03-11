@@ -83,11 +83,12 @@ def generate_examples():
                 else:
                     label = [f"I-{line['label'].upper()}"] * len(bbox)
                     label[0] = f"B-{line['label'].upper()}"
-                label = [ner_label_index_map[l] for l in label]
-                tokenized_inputs.update({"bbox": bbox, "labels": label})
+                # label = [ner_label_index_map[l] for l in label]
+                tokenized_inputs.update({"bbox": bbox, "labels": [ner_label_index_map[l] for l in label]})
                 if label[0] != "O":
                     # entity_id_to_index_map:每个实体对应一个唯一id，为每个id按照顺序重新索引
                     entity_id_to_index_map[line["id"]] = len(entities)
+
                     entities.append(
                         {
                             "start": len(tokenized_doc["input_ids"]),
@@ -95,6 +96,7 @@ def generate_examples():
                             "label": entity_label_index_map[line["label"].upper()],
                         }
                     )
+
                 for i in tokenized_doc:
                     tokenized_doc[i] = tokenized_doc[i] + tokenized_inputs[i]
             relations = list(set(relations))
@@ -183,7 +185,7 @@ def generate_examples():
 
                 item['entities'] = merge(item['entities'])
                 if item['relations'] == []:
-                    item['relations'] = {'head':[], 'tail':[], 'start_index':[], 'end_index':[]}
+                    item['relations'] = {'head': [], 'tail': [], 'start_index': [], 'end_index': []}
                 else:
                     item['relations'] = merge(item['relations'])
 
