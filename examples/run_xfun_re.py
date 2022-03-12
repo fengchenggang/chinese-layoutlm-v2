@@ -169,9 +169,11 @@ def re_infer(test_dataset):
     predictions, labels, metrics = trainer.predict(test_dataset)
 
     # Save predictions
-    output_test_predictions_file = os.path.join('./output/test-re-xfund', "test_predictions_re.json")
-    with open(output_test_predictions_file, 'w') as f:
-        json.dump({'pred': predictions, 'label': labels}, f)
+    # output_test_predictions_file = os.path.join('./output/test-re-xfund', "test_predictions_re.json")
+    # with open(output_test_predictions_file, 'w') as f:
+    #     json.dump({'pred': predictions, 'label': labels}, f)
+
+    return predictions
 
 
 if __name__ == "__main__":

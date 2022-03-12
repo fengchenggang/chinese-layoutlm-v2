@@ -17,7 +17,7 @@ tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
 ner_labels = ["O", "B-QUESTION", "B-ANSWER", "B-HEADER", "I-ANSWER", "I-QUESTION", "I-HEADER"]
 ner_label_index_map = {label: index for index, label in enumerate(ner_labels)}
-entity_labels = ["HEADER", "QUESTION", "ANSWER", "OTHER"]
+entity_labels = ["HEADER", "QUESTION", "ANSWER"]
 entity_label_index_map = {label: index for index, label in enumerate(entity_labels)}
 
 
