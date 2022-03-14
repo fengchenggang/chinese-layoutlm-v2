@@ -1,21 +1,20 @@
-from flask import request, Flask
+from flask import request, Flask, send_file
 import base64
-import cv2
+import os
 import numpy as np
 
 app = Flask(__name__)
 
+base_directory = os.path.dirname(os.path.abspath(__file__))
 
-@app.route("/", methods=['POST', 'GET'])
-def get_frame():
-    # 解析图片数据
-    img = base64.b64decode(str(request.form['image']))
-    image_data = np.fromstring(img, np.uint8)
-    image_data = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
-    cv2.imwrite(r'/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/0.jpg', image_data)
-    print(image_data)
-    return 'koukou'
+@app.route("/result/<filename>")
+def download(filename):
+    localfile = os.path.join(base_directory, 'requests_images', filename)
+    if os.path.isfile(localfile):
+        return send_file(localfile, as_attachment=True)
+    else:
+        return {'state': 'file is not existed'}
 
 
 if __name__ == "__main__":
-    app.run("localhost", port=10004)
+    app.run(host='localhost', port=10004, debug=True)

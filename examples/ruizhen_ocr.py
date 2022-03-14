@@ -2,6 +2,8 @@ import requests
 import os
 import io
 import traceback
+import time
+
 
 class RuizhenAngle:
     def __init__(self):
@@ -42,7 +44,17 @@ class RuizhenAngle:
         return result
 
 
+def test_bytes_rec(b):
+    ruizhen_ocr = RuizhenAngle()
+    res = ruizhen_ocr.request_in_image_bytes(b, {'image_path':''})
+    print(res)
+
+
 if __name__ == '__main__':
     ruizhen_ocr = RuizhenAngle()
     res = ruizhen_ocr.request_in_image_file('images\data##PO##短PO-4500082478_1.png')
     print(res)
+
+    # img = cv2.imread('/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val/zh_val_0.jpg')
+    # b = np.array(cv2.imencode('.png', img)[1]).tobytes()
+    # test_bytes_rec(b)

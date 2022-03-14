@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
-import base64
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
+
+import uuid
+import os
 import copy
-import numpy as np
+import time
 import traceback
 import cv2
 
 from ruizhen_ocr import RuizhenAngle
-from flask import Flask
+from flask import Flask, send_file
 from flask import request
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
@@ -23,16 +28,28 @@ entity_labels = ["HEADER", "QUESTION", "ANSWER"]
 entity_label_index_map = {label: index for index, label in enumerate(entity_labels)}
 index_entity_label_map = {index: label for index, label in enumerate(entity_labels)}
 
+base_directory = os.path.dirname(os.path.abspath(__file__))
 
-def gene_ner_data(bin_file):
-    ocr_res = ruizhen_ocr.request_in_image_file(bin_file)
+
+def gene_ner_data(file):
+    '''
+
+    :param file: 文件路径或者opencv图片格式
+    :return:
+    '''
+    start_time = time.time()
+    ocr_res = ruizhen_ocr.request_in_image_file(file)
+    print('OCR cost time: %d' % (time.time() - start_time))
+    image, size = load_image(file)
+
+    # image = file
+    # size = (image.shape[1], image.shape[0])
+    # # 把opencv图片转二进制
+    # bin_data = np.array(cv2.imencode('.png', image)[1]).tobytes()
+    # ocr_res = ruizhen_ocr.request_in_image_bytes(bin_data, {'image_path': ''})
+
     rec_results = ocr_res['response']['data']['identify_results'][0]['details']['text2']
 
-    if isinstance(bin_file, str):
-        image, size = load_image(bin_file)
-    else:
-        image = bin_file
-        size = (image.shape[1], image.shape[0])
     tokenized_doc = {"input_ids": [], "bbox": [], "labels": []}
     bbox_src_size = []
 
@@ -91,7 +108,7 @@ def gene_ner_data(bin_file):
     for k in tokenized_doc:
         item[k] = tokenized_doc[k]
     item['image'] = image
-    return [item], image, bbox_src_size
+    return [item], bbox_src_size
 
 
 def gene_entities(results):
@@ -178,31 +195,49 @@ def draw_rec(img, results, bbox_src_size):
 
 
 def kv_extract(bin_file):
-    ner_test_dataset, image, bbox_src_size = gene_ner_data(bin_file)
+    ner_test_dataset, bbox_src_size = gene_ner_data(bin_file)
     ner_res = ner_infer(copy.deepcopy(ner_test_dataset))
     re_test_dataset = gene_re_data(ner_test_dataset, ner_res)
     re_res = re_infer(re_test_dataset)
+    image = cv2.imread(bin_file)
     return draw_rec(image, re_res, bbox_src_size)
+
+
+def gene_uid():
+    return ''.join(str(uuid.uuid4()).split('-'))
 
 
 @app.route("/kv_extract", methods=['POST', 'GET'])
 def extract():
     try:
-        img = base64.b64decode(str(request.form['image']))
-        image_data = np.fromstring(img, np.uint8)
-        image_data = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
-        image = kv_extract(image_data)
+        save_image_path = os.path.join(base_directory, 'requests_images', gene_uid() + '.jpg')
+        with open(save_image_path, 'wb') as f:
+            f.write(request.files.get('file').stream.read())
 
-        image = cv2.imencode('.jpg', image)[1]
-        base64_data = str(base64.b64encode(image))[2:-1]
-        return {'state': 'succeed', 'img': base64_data}
+        draw_img = kv_extract(save_image_path)
+
+        # 保存图片
+        filename2 = gene_uid() + '.jpg'
+        localfile2 = os.path.join(base_directory, 'draw_images', filename2)
+        cv2.imwrite(localfile2, draw_img)
+
+        return {'state': 'succeed', 'filename': filename2}
     except:
         traceback.print_exc()
         return {"state": 'failed'}
 
 
+@app.route("/result/<filename>")
+def download(filename):
+    localfile = os.path.join(base_directory, 'draw_images', filename)
+    if os.path.isfile(localfile):
+        return send_file(localfile, as_attachment=True)
+    else:
+        return {'state': 'file is not existed'}
+
+
 if __name__ == "__main__":
-    app.run(host='localhost', port=10003, debug=True)
+    app.run(host='0.0.0.0', port=10004, debug=True)
 
     # 测试
     # gene_ner_data(r'/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val/zh_val_0.jpg')
