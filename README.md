@@ -1,6 +1,6 @@
 
 
-# Pipline
+# Key-Value Pair抽取
 
 - python run_xfun_ser.py 进行实体识别训练  
   `python run_xfun_ser.py 
@@ -103,5 +103,14 @@ zh
 - results_process_for_re.py  将对齐的实体识别结果处理成re输入格式，测试的不使用
 
 - python app.py
-  - KV关系抽取服务
+  - 端到端KV关系抽取服务
+  - 输入visual rich document，输出key value pair可视化结果
+  
+# Document Embedding
+
+## Train mode
+
+
+
+## No Train
   
