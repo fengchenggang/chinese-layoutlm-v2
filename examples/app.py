@@ -15,8 +15,8 @@ from flask import Flask, send_file
 from flask import request
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
-from run_xfun_ser import ner_infer
-from run_xfun_re import re_infer
+from run_xfun_ser_infer import ner_infer
+from run_xfun_re_infer import re_infer
 
 ruizhen_ocr = RuizhenAngle()
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")

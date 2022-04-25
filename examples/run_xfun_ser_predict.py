@@ -3,26 +3,28 @@
 
 import logging
 import os
-import json
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+os.environ["WANDB_DISABLED"] = "true"
 
 import sys
+import time
+from dataclasses import dataclass, field
+from typing import Optional
 
 import numpy as np
-from datasets import ClassLabel, load_dataset
+from datasets import ClassLabel, load_dataset, load_metric
 
 import layoutlmft.data.datasets.xfun
-import layoutlmft.data.datasets.xfun_pipline
+import layoutlmft.data.datasets.xfun_predict
 import transformers
-from layoutlmft import AutoModelForRelationExtraction
+from layoutlmft.data import DataCollatorForKeyValueExtraction
 from layoutlmft.data.data_args import XFUNDataTrainingArguments
-from layoutlmft.data.data_collator import DataCollatorForKeyValueExtraction
-from layoutlmft.evaluation import re_score
 from layoutlmft.models.model_args import ModelArguments
-from layoutlmft.trainers import XfunReTrainer
+from layoutlmft.trainers import XfunSerTrainer
 from transformers import (
     AutoConfig,
+    AutoModelForTokenClassification,
     AutoTokenizer,
     HfArgumentParser,
     PreTrainedTokenizerFast,
@@ -30,14 +32,16 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
+from transformers.utils import check_min_version
+
+
+# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
+check_min_version("4.5.0")
 
 logger = logging.getLogger(__name__)
 
 
 def main():
-    # See all possible arguments in src/transformers/training_args.py
-    # or by passing the --help flag to this script.
-    # We now keep distinct sets of args, for a cleaner separation of concerns.
 
     parser = HfArgumentParser((ModelArguments, XFUNDataTrainingArguments, TrainingArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -46,6 +50,9 @@ def main():
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    format_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime())
+    training_args.logging_dir = os.path.join(training_args.logging_dir, format_time)
 
     # Detecting last checkpoint.
     last_checkpoint = None
@@ -85,7 +92,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
     datasets = load_dataset(
-        os.path.abspath(layoutlmft.data.datasets.xfun.__file__),
+        os.path.abspath(layoutlmft.data.datasets.xfun_predict.__file__),
         f"xfun.{data_args.lang}",
         additional_langs=data_args.additional_langs,
         keep_in_memory=True,
@@ -114,17 +121,13 @@ def main():
         label_list.sort()
         return label_list
 
-    # if isinstance(features[label_column_name].feature, ClassLabel):
-    #     label_list = features[label_column_name].feature.names
-    #     # No need to convert the labels since they are already ints.
-    #     label_to_id = {i: i for i in range(len(label_list))}
-    # else:
-    #     label_list = get_label_list(datasets["test"][label_column_name])
-    #     label_to_id = {l: i for i, l in enumerate(label_list)}
-
-    with open('../gartner-data/datasets_labels.json', 'r', encoding='utf-8') as f:
-        label_list = json.load(f)['labels']
-    label_to_id = {l: i for i, l in enumerate(label_list)}
+    if isinstance(features[label_column_name].feature, ClassLabel):
+        label_list = features[label_column_name].feature.names
+        # No need to convert the labels since they are already ints.
+        label_to_id = {i: i for i in range(len(label_list))}
+    else:
+        label_list = get_label_list(datasets["train"][label_column_name])
+        label_to_id = {l: i for i, l in enumerate(label_list)}
     num_labels = len(label_list)
 
     # Load pretrained model and tokenizer
@@ -147,7 +150,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    model = AutoModelForRelationExtraction.from_pretrained(
+    model = AutoModelForTokenClassification.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
@@ -197,13 +200,44 @@ def main():
         max_length=512,
     )
 
+    # Metrics
+    metric = load_metric("seqeval")
+
     def compute_metrics(p):
-        pred_relations, gt_relations = p
-        score = re_score(pred_relations, gt_relations, mode="boundaries")
-        return score
+        predictions, labels = p
+        predictions = np.argmax(predictions, axis=2)
+
+        # Remove ignored index (special tokens)
+        true_predictions = [
+            [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+            for prediction, label in zip(predictions, labels)
+        ]
+        true_labels = [
+            [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
+            for prediction, label in zip(predictions, labels)
+        ]
+
+        results = metric.compute(predictions=true_predictions, references=true_labels)
+        if data_args.return_entity_level_metrics:
+            # Unpack nested dictionaries
+            final_results = {}
+            for key, value in results.items():
+                if isinstance(value, dict):
+                    for n, v in value.items():
+                        final_results[f"{key}_{n}"] = v
+                else:
+                    final_results[key] = value
+            return final_results
+        else:
+            return {
+                "precision": results["overall_precision"],
+                "recall": results["overall_recall"],
+                "f1": results["overall_f1"],
+                "accuracy": results["overall_accuracy"],
+            }
 
     # Initialize our Trainer
-    trainer = XfunReTrainer(
+    trainer = XfunSerTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
@@ -246,15 +280,23 @@ def main():
         logger.info("*** Predict ***")
 
         predictions, labels, metrics = trainer.predict(test_dataset)
+        predictions = np.argmax(predictions, axis=2)
+
+        # Remove ignored index (special tokens)
+        true_predictions = [
+            [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+            for prediction, label in zip(predictions, labels)
+        ]
 
         trainer.log_metrics("test", metrics)
         trainer.save_metrics("test", metrics)
 
         # Save predictions
-        print('test datasets num is %d' % len(labels))
-        output_test_predictions_file = os.path.join(training_args.output_dir, "predictions_embedding.json")
-        with open(output_test_predictions_file, 'w') as f:
-            json.dump({'pred': predictions.cpu().numpy().tolist(), 'label': labels}, f)
+        output_test_predictions_file = os.path.join(training_args.output_dir, "test_predictions.txt")
+        if trainer.is_world_process_zero():
+            with open(output_test_predictions_file, "w") as writer:
+                for prediction in true_predictions:
+                    writer.write(" ".join(prediction) + "\n")
 
 
 def _mp_fn(index):

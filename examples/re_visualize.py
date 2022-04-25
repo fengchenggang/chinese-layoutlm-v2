@@ -6,12 +6,8 @@ import cv2
 import copy
 import numpy as np
 
-import datasets
-
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
-
-_URL = "/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/"
 
 _LANG = ["zh", "de", "es", "fr", "en", "it", "ja", "pt"]
 logger = logging.getLogger(__name__)
@@ -19,10 +15,7 @@ logger = logging.getLogger(__name__)
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
 
-def _generate_examples():
-    preds_path = '/work/Codes/layoutlmft/examples/output/test-re-xfund/test_predictions_re.json'
-    filepaths = [['/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val.json',
-                  '/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val']]
+def _generate_examples(preds_path, filepaths, output_path):
     items = []
     for filepath in filepaths:
         logger.info("Generating examples from = %s", filepath)
@@ -216,6 +209,7 @@ def _generate_examples():
             if lines == []:
                 lines.extend(d['lines'])
         line = ' '.join(lines)
+        print(len(line))
         tokenizer_output = tokenizer(
             line,
             add_special_tokens=False,
@@ -227,9 +221,9 @@ def _generate_examples():
         offset = tokenizer_output['offset_mapping']
 
         img_path = os.path.join(filepaths[0][1], 'zh_val_%s.jpg' % doc_id)
-        save_path = os.path.join('re-visualize', 'zh_val_%s.jpg' % doc_id)
+        save_path = os.path.join(output_path, 'zh_val_%s.jpg' % doc_id)
         if not os.path.exists(os.path.dirname(save_path)):
-            os.mkdir(os.path.dirname(save_path))
+            os.makedirs(os.path.dirname(save_path))
         img = cv2.imread(img_path)
 
         def get_ent_bbox(ent_bbox):
@@ -303,4 +297,10 @@ if __name__ == '__main__':
     '''
     将关系的识别结果跟真是结果显示在图片中
     '''
-    _generate_examples()
+    preds_path = './data/xfund-and-funsd/models/test-re-xfund/test_predictions_re.json'
+
+    filepaths = [['./data/xfund-and-funsd/XFUND-and-FUNSD/zh.val.json',
+                  './data/xfund-and-funsd/XFUND-and-FUNSD/zh.val']]
+
+    output_path = './data/xfund-and-funsd/re_visualize'
+    _generate_examples(preds_path, filepaths, output_path)

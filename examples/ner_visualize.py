@@ -6,12 +6,8 @@ import cv2
 import copy
 import numpy as np
 
-import datasets
-
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
-
-_URL = "/work/Datasets/Doc-understanding/XFUND/XFUND-DATA/"
 
 _LANG = ["zh", "de", "es", "fr", "en", "it", "ja", "pt"]
 logger = logging.getLogger(__name__)
@@ -19,10 +15,8 @@ logger = logging.getLogger(__name__)
 tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 
 
-def _generate_examples():
-    preds_path = '/work/Codes/layoutlmft/examples/output/test-ner-xfund/test_predictions.txt'
-    filepaths = [['/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val.json',
-                  '/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/zh.val']]
+def _generate_examples(preds_path, filepaths,output_path):
+
     items = []
     for filepath in filepaths:
         logger.info("Generating examples from = %s", filepath)
@@ -225,9 +219,9 @@ def _generate_examples():
         assert len(offset) == len(bbox_src) == len(pred) == len(tokens) == len(labels)
 
         img_path = os.path.join(filepaths[0][1], 'zh_val_%s.jpg' % doc_id)
-        save_path = os.path.join('ner-visualize', 'zh_val_%s.jpg' % doc_id)
+        save_path = os.path.join(output_path, 'zh_val_%s.jpg' % doc_id)
         if not os.path.exists(os.path.dirname(save_path)):
-            os.mkdir(os.path.dirname(save_path))
+            os.makedirs(os.path.dirname(save_path))
         img = cv2.imread(img_path)
 
         def draw_rec(img, results, tokens):
@@ -289,4 +283,10 @@ if __name__ == '__main__':
     '''
     将实体的识别结果跟真是结果显示在图片中
     '''
-    _generate_examples()
+
+    preds_path = './data/xfund-and-funsd/models/test-ner-xfund/test_predictions.txt'
+    filepaths = [['./data/xfund-and-funsd/XFUND-and-FUNSD/zh.val.json',
+                  './data/xfund-and-funsd/XFUND-and-FUNSD/zh.val']]
+
+    output_path = './data/xfund-and-funsd/ner_visualize'
+    _generate_examples(preds_path, filepaths, output_path)

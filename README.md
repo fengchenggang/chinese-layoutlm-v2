@@ -1,34 +1,107 @@
-# layoutlmft
-**Multimodal (text + layout/format + image) fine-tuning toolkit for document understanding**
 
-## Introduction
 
-## Supported Models
-Popular Language Models: BERT, UniLM(v2), RoBERTa, InfoXLM
+# Pipline
 
-LayoutLM Family: LayoutLM, LayoutLMv2, LayoutXLM
+- python run_xfun_ser.py 进行实体识别训练  
+  `python run_xfun_ser.py 
+  --model_name_or_path
+    ./pretrained_model/layoutxlm-base
+    --output_dir
+    ./data/xfund-and-funsd/models/test-ner-xfund
+    --do_train
+    --do_eval
+    --lang
+    zh
+    --num_train_epochs
+    100
+    --warmup_ratio
+    0.1
+    --fp16
+    --additional_langs
+    all
+    --per_device_train_batch_size
+    16
+    --per_device_eval_batch_size
+    16
+    --logging_dir
+    ./data/xfund-and-funsd/runs/ner-xfund
+    --save_steps
+    300
+    --logging_steps
+    300
+    --evaluation_strategy
+    steps
+    --eval_steps
+    300`
+- python run_xfun_re.py 进行关系抽取训练，使用datasets.xfun_pipline.py
+进行数据的读取，处理  
+  `--model_name_or_path
+./pretrained_model/layoutxlm-base
+--output_dir
+./data/xfund-and-funsd/models/test-re-xfund
+--do_train
+--do_eval
+--lang
+zh
+--num_train_epochs
+100
+--warmup_ratio
+0.1
+--fp16
+--additional_langs
+all
+--per_device_train_batch_size
+16
+--per_device_eval_batch_size
+16
+--logging_dir
+./data/xfund-and-funsd/runs/re-xfund
+--save_steps
+300
+--logging_steps
+300
+--evaluation_strategy
+steps
+--eval_steps
+300
+--learning_rate
+3e-5`
 
-## Installation
+- pred_data_process.py 在进行实体识别前，对bbox进行 行对齐
+  - 使用行对齐操作，使得模型在推理阶段f1提升1.2%
 
-~~~bash
-conda create -n layoutlmft python=3.7
-conda activate layoutlmft
-git clone https://github.com/microsoft/unilm.git
-cd unilm
-cd layoutlmft
-pip install -r requirements.txt
-pip install -e .
-~~~
+- 实体预测
+`python run_xfun_ser_predict.py  
+--model_name_or_path
+./data/xfund-and-funsd/models/test-ner-xfund/checkpoint-3900
+--output_dir
+./data/xfund-and-funsd/models/test-ner-xfund
+--do_predict
+--lang
+zh
+--warmup_ratio
+0.1
+--fp16`
 
-## License
+- 基于实体识别结果的关系预测
+`python run_xfun_re_predict.py 
+--model_name_or_path
+./data/xfund-and-funsd/models/test-re-xfund/checkpoint-10500
+--output_dir
+./data/xfund-and-funsd/models/test-re-xfund
+--do_predict
+--lang
+zh
+--warmup_ratio
+0.1
+--fp16`
 
-The content of this project itself is licensed under the [Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-Portions of the source code are based on the [transformers](https://github.com/huggingface/transformers) project.
-[Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct)
+- ner_visualize.py 识别出的实体和Ground True的可视化
 
-### Contact Information
+- re_visualize.py 关系的可视化
 
-For help or issues using layoutlmft, please submit a GitHub issue.
+- results_process_for_re.py  将对齐的实体识别结果处理成re输入格式，测试的不使用
 
-For other communications related to layoutlmft, please contact Lei Cui (`lecu@microsoft.com`), Furu Wei (`fuwei@microsoft.com`).
-
+- python app.py
+  - KV关系抽取服务
+  
