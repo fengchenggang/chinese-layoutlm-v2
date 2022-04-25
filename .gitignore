@@ -1,11 +1,6 @@
 
-layoutxlm-base/
-microsoft-layoutlmv2-base-uncased/
-gartner-data/
-examples/XFUND-DATA-Gartner/
-examples/test*
-examples/draw_images/
-examples/requests_images/
+
+examples/data/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,pycharm+all
