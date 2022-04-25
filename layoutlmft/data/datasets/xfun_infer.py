@@ -8,7 +8,8 @@ import datasets
 from layoutlmft.data.utils import load_image, merge_bbox, normalize_bbox, simplify_bbox
 from transformers import AutoTokenizer
 
-_URL = "/work/Codes/layoutlmft/examples/XFUND-DATA-Gartner/"
+_URL = os.path.join(os.getcwd(), "data/xfund-and-funsd/XFUND-and-FUNSD/")
+print(_URL)
 
 _LANG = ["zh", "de", "es", "fr", "en", "it", "ja", "pt"]
 logger = logging.getLogger(__name__)

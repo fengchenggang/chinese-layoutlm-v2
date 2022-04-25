@@ -14,6 +14,9 @@ class FunsdTrainer(Trainer):
         for k, v in inputs.items():
             if hasattr(v, "to") and hasattr(v, "device"):
                 inputs[k] = v.to(self.args.device)
+            if isinstance(v, dict):
+                for k1, v1 in v.items():
+                    inputs[k][k1] = v1.to(self.args.device)
 
         if self.args.past_index >= 0 and self._past is not None:
             inputs["mems"] = self._past

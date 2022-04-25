@@ -6,13 +6,13 @@ import os
 import json
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '7'
-
+os.environ["WANDB_DISABLED"] = "true"
 import sys
-
+import time
 import transformers
-from layoutlmft import AutoModelForRelationExtraction
+from layoutlmft.models.doc_embedding import docEmbeddingModel
 from layoutlmft.data.data_args import XFUNDataTrainingArguments
-from layoutlmft.data.data_collator import DataCollatorForKeyValueExtraction
+from layoutlmft.data.data_collator_doc_embedding import DataCollatorForKeyValueExtraction
 from layoutlmft.evaluation import re_score
 from layoutlmft.models.model_args import ModelArguments
 from layoutlmft.trainers import XfunReTrainer
@@ -41,6 +41,9 @@ def main():
         model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
         model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    format_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime())
+    training_args.logging_dir = os.path.join(training_args.logging_dir, format_time)
 
     # Detecting last checkpoint.
     last_checkpoint = None
@@ -79,30 +82,14 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
-    # datasets = load_dataset(
-    #     os.path.abspath(layoutlmft.data.datasets.xfun.__file__),
-    #     f"xfun.{data_args.lang}",
-    #     additional_langs=data_args.additional_langs,
-    #     keep_in_memory=True,
-    # )
+
     from layoutlmft.data.datasets.xfun_doc_embedding import _generate_examples
-    train, dev, test = _generate_examples()
-    # if training_args.do_train:
-    #     column_names = datasets["train"].column_names
-    #     features = datasets["train"].features
-    # elif training_args.do_eval:
-    #     column_names = datasets["validation"].column_names
-    #     features = datasets["validation"].features
-    # else:
-    #     column_names = datasets["test"].column_names
-    #     features = datasets["test"].features
-    text_column_name = "input_ids"
-    label_column_name = "labels"
 
-    # remove_columns = column_names
+    filepaths = [['./data/gartner_data/data/zh.test.json',
+                  './data/gartner_data/data/zh.test']]
 
-    # In the event the labels are not a `Sequence[ClassLabel]`, we will need to go through the dataset to get the
-    # unique labels.
+    train, dev, test = _generate_examples(filepaths)
+
     def get_label_list(labels):
         unique_labels = set()
         for label in labels:
@@ -110,19 +97,6 @@ def main():
         label_list = list(unique_labels)
         label_list.sort()
         return label_list
-
-    # if isinstance(features[label_column_name].feature, ClassLabel):
-    #     label_list = features[label_column_name].feature.names
-    #     # No need to convert the labels since they are already ints.
-    #     label_to_id = {i: i for i in range(len(label_list))}
-    # else:
-    #     label_list = get_label_list(datasets["test"][label_column_name])
-    #     label_to_id = {l: i for i, l in enumerate(label_list)}
-
-    # with open('../gartner-data/datasets_labels.json', 'r', encoding='utf-8') as f:
-    #     label_list = json.load(f)['labels']
-    # label_to_id = {l: i for i, l in enumerate(label_list)}
-    # num_labels = len(label_list)
 
     label_list = ['pos', 'neg']
     label_to_id = {l: i for i, l in enumerate(label_list)}
@@ -149,7 +123,7 @@ def main():
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
     )
-    model = AutoModelForRelationExtraction.from_pretrained(
+    model = docEmbeddingModel.from_pretrained(
         model_args.model_name_or_path,
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
@@ -169,27 +143,6 @@ def main():
     # Preprocessing the dataset
     # Padding strategy
     padding = "max_length" if data_args.pad_to_max_length else False
-
-    # if training_args.do_train:
-    #     if "train" not in datasets:
-    #         raise ValueError("--do_train requires a train dataset")
-    #     train_dataset = datasets["train"]
-    #     if data_args.max_train_samples is not None:
-    #         train_dataset = train_dataset.select(range(data_args.max_train_samples))
-    #
-    # if training_args.do_eval:
-    #     if "validation" not in datasets:
-    #         raise ValueError("--do_eval requires a validation dataset")
-    #     eval_dataset = datasets["validation"]
-    #     if data_args.max_val_samples is not None:
-    #         eval_dataset = eval_dataset.select(range(data_args.max_val_samples))
-    #
-    # if training_args.do_predict:
-    #     if "test" not in datasets:
-    #         raise ValueError("--do_predict requires a test dataset")
-    #     test_dataset = datasets["test"]
-    #     if data_args.max_test_samples is not None:
-    #         test_dataset = test_dataset.select(range(data_args.max_test_samples))
 
     # Data collator
     data_collator = DataCollatorForKeyValueExtraction(

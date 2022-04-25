@@ -107,9 +107,45 @@ zh
   - 输入visual rich document，输出key value pair可视化结果
   
 # Document Embedding
+## 算法
+- 基于SBERT中有监督学习训练算法
 
 ## Train mode
+- 样例数据准备
 
+- 模型训练
+` python run_xfun_doc_embedding_train.py
+--model_name_or_path
+./pretrained_model/layoutxlm-base
+--output_dir
+./data/gartner_data/models
+--do_train
+--do_eval
+--lang
+zh
+--num_train_epochs
+100
+--warmup_ratio
+0.1
+--fp16
+--additional_langs
+all
+--per_device_train_batch_size
+8
+--per_device_eval_batch_size
+8
+--logging_dir
+./data/gartner_data/runs
+--save_steps
+300
+--logging_steps
+300
+--evaluation_strategy
+steps
+--eval_steps
+300
+--learning_rate
+3e-5`
 
 
 ## No Train
