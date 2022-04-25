@@ -935,3 +935,5 @@ class LayoutLMv2ForRelationExtraction(LayoutLMv2PreTrainedModel):
             pred_relations=pred_relations,
             hidden_states=outputs[0],
         )
+
+

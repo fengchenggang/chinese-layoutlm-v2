@@ -149,4 +149,16 @@ steps
 
 
 ## No Train
-  
+
+- 文档向量化
+` python run_xfun_doc_embedding_no_train
+--model_name_or_path
+./pretrained_model/layoutxlm-base
+--output_dir
+./data/gartner_data/embedding_no_train/
+--do_predict
+--lang
+zh
+--warmup_ratio
+0.1
+--fp16`

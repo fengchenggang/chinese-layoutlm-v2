@@ -954,3 +954,37 @@ class docEmbeddingModel(LayoutLMv2PreTrainedModel):
             return {'reps':reps, 'preds':output}
 
 
+class docEmbeddingModelNoTrain(LayoutLMv2PreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.layoutlmv2 = LayoutLMv2Model(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.extractor = REDecoder(config)
+        self.init_weights()
+
+    def forward(
+        self,
+        input_ids,
+        bbox,
+        labels=None,
+        image=None,
+        attention_mask=None,
+        token_type_ids=None,
+        position_ids=None,
+        head_mask=None,
+    ):
+        outputs = self.layoutlmv2(
+            input_ids=input_ids,
+            bbox=bbox,
+            image=image,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
+            head_mask=head_mask,
+        )
+
+        last_hidden_state = outputs[0].last_hidden_state
+
+        # 将[CLS]对应的向量返回
+        cls_embedding = last_hidden_state[:, 0, :]
+        return cls_embedding
