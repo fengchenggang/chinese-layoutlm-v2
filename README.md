@@ -1,4 +1,24 @@
-
+# Prepare
+- 数据目录结构  
+```shell script
+data
+|-- gartner_data
+|   |-- data
+|   |-- embedding_no_train
+|   |-- models
+|   `-- runs
+`-- xfund-and-funsd
+    |-- XFUND-and-FUNSD
+    |-- models
+    |-- ner_visualize
+    |-- re_visualize
+    `-- runs
+```
+- 数据集
+目录gartner_data/data[链接](https://pan.baidu.com/s/1BFyGioxGDcR8Fw0S-1VyyQ?pwd=11m8)    
+目录xfund-and-funsd/XFUND-and-FUNSD[链接](https://pan.baidu.com/s/1eoBvkkmM1bSSgkYyvVq6cQ?pwd=9pde)  
+- 预训练模型layoutxlm  
+目录pretrained_model/layoutxlm-base[链接](https://pan.baidu.com/s/1tFlF_-zzV45GL5eDlJVG5A?pwd=svbw)   
 
 # Key-Value Pair抽取
 
